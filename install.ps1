@@ -15,10 +15,15 @@
   if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     Say "  Installing winget (Windows' package manager)..."
     $ProgressPreference = 'SilentlyContinue'
-    Install-PackageProvider -Name NuGet -Scope CurrentUser -Force | Out-Null
-    Install-Module Microsoft.WinGet.Client -Scope CurrentUser -Repository PSGallery -Force | Out-Null
-    Repair-WinGetPackageManager -Force -Latest | Out-Null
+    # Older Windows PowerShell setups default to TLS 1.0/1.1, which PowerShell Gallery refuses.
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+    try {
+      Install-PackageProvider -Name NuGet -Scope CurrentUser -Force -ErrorAction Stop | Out-Null
+      Install-Module Microsoft.WinGet.Client -Scope CurrentUser -Repository PSGallery -Force -ErrorAction Stop | Out-Null
+      Repair-WinGetPackageManager -Force -Latest -ErrorAction Stop | Out-Null
+    } catch { throw "Couldn't install winget ($($_.Exception.Message)). Install 'App Installer' from the Microsoft Store, then run this again." }
     Fresh-Path
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) { throw "winget still isn't available. Install 'App Installer' from the Microsoft Store, then run this again." }
   }
   $git = "$env:ProgramFiles\Git\cmd\git.exe"; $gh = "$env:ProgramFiles\GitHub CLI\gh.exe"; $bash = "$env:ProgramFiles\Git\bin\bash.exe"
   foreach ($p in @(@('Git.Git', $git), @('GitHub.cli', $gh))) {
