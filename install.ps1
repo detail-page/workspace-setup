@@ -38,7 +38,7 @@
   if ($LASTEXITCODE -ne 0) {
     Say "`n  GitHub sign-in: open https://github.com/login/device and enter the code below (it expires in 15 minutes)."
     # Through Git Bash with no input, so it prints the code and waits instead of asking to press Enter.
-    & $bash -lc "'/c/Program Files/GitHub CLI/gh.exe' auth login --hostname github.com --git-protocol https --web --scopes repo,read:org,workflow </dev/null 2>&1"
+    & $bash -lc "'/c/Program Files/GitHub CLI/gh.exe' auth login --hostname github.com --git-protocol https --web --clipboard --scopes repo,read:org,workflow </dev/null 2>&1"
     & $gh auth status *> $null
     if ($LASTEXITCODE -ne 0) { throw "GitHub sign-in didn't finish. Run this again to get a new code." }
   }
