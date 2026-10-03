@@ -3,7 +3,9 @@
 # CLI, signs you in to GitHub, clones detail-page/engineering-workspace, then runs its setup.
 #   irm https://raw.githubusercontent.com/detail-page/workspace-setup/main/install.ps1 | iex
 & {
-  $ErrorActionPreference = 'Stop'
+  # 'Continue': in Windows PowerShell 5.1, 'Stop' turns any stderr from gh/git/winget into a fatal error,
+  # even when redirected. Every failure below is checked and explained explicitly instead.
+  $ErrorActionPreference = 'Continue'
   Set-ExecutionPolicy -Scope Process Bypass -Force
   [Console]::OutputEncoding = [Text.Encoding]::UTF8
   $repo = Join-Path $HOME 'engineering-workspace'
