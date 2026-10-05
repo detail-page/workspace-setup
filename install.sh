@@ -35,9 +35,8 @@ if ! command -v gh >/dev/null 2>&1; then
   chmod +x "$BIN/gh"; rm -rf "$t"
 fi
 if ! gh auth status >/dev/null 2>&1; then
-  say ""; say "  GitHub sign-in: open https://github.com/login/device and enter the 8-character code shown below"
-  say "  (it may already be on your clipboard). It expires in 15 minutes."
-  gh auth login --hostname github.com --git-protocol https --web --scopes repo,read:org,workflow </dev/null 2>&1 | grep --line-buffered -vE 'Failed to copy one-time code|No clipboard utilities' || true
+  say ""; say "  GitHub sign-in: open https://github.com/login/device and enter the code shown below (it expires in 15 minutes)."
+  gh auth login --hostname github.com --git-protocol https --web --scopes repo,read:org,workflow </dev/null 2>&1 || true
   gh auth status >/dev/null 2>&1 || die "GitHub sign-in didn't finish. Run this again to get a new code."
 fi
 gh auth setup-git >/dev/null
