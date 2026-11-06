@@ -1,8 +1,8 @@
 # DetailPage workspace: getting started
 
-This public repo holds only the first step of setting up a DetailPage engineering workspace. It
+This public repo holds only the first step of setting up a DetailPage workspace, for anyone at DetailPage. It
 installs what's needed to sign in to GitHub, signs you in, and downloads the private
-[engineering-workspace](https://github.com/detail-page/engineering-workspace), whose setup does the rest.
+[engineering-workspace](https://github.com/detail-page/engineering-workspace), whose `SETUP.md` Claude follows to do the rest.
 Nothing secret lives here. You need a GitHub account in the detail-page organization (ask your Tech Lead).
 
 **Windows**: open PowerShell and paste:

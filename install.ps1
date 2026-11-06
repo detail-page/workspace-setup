@@ -1,6 +1,7 @@
 # DetailPage workspace bootstrap for Windows. Public on purpose: it runs before you're signed in to
 # GitHub, so it can't live in the private repo. It installs winget (if missing), Git and the GitHub
-# CLI, signs you in to GitHub, clones detail-page/engineering-workspace, then runs its setup.
+# CLI, signs you in to GitHub, clones detail-page/engineering-workspace, then hands off to its SETUP.md,
+# which your Claude app runs for you.
 #   irm https://raw.githubusercontent.com/detail-page/workspace-setup/main/install.ps1 | iex
 & {
   # 'Continue': in Windows PowerShell 5.1, 'Stop' turns any stderr from gh/git/winget into a fatal error,
@@ -38,7 +39,7 @@
   if ($LASTEXITCODE -ne 0) {
     Say "`n  GitHub sign-in: open https://github.com/login/device and enter the code below (it expires in 15 minutes)."
     # Through Git Bash with no input, so it prints the code and waits instead of asking to press Enter.
-    & $bash -lc "'/c/Program Files/GitHub CLI/gh.exe' auth login --hostname github.com --git-protocol https --web --clipboard --scopes repo,read:org,workflow </dev/null 2>&1"
+    & $bash -lc "'/c/Program Files/GitHub CLI/gh.exe' auth login --hostname github.com --git-protocol https --web --clipboard --scopes repo,read:org,workflow,read:packages </dev/null 2>&1"
     & $gh auth status *> $null
     if ($LASTEXITCODE -ne 0) { throw "GitHub sign-in didn't finish. Run this again to get a new code." }
   }
@@ -47,11 +48,14 @@
   if ($LASTEXITCODE -ne 0) { throw "Your GitHub account isn't in DetailPage's GitHub organization yet. Ask your Tech Lead for an invite, accept it, then run this again." }
   if (Test-Path (Join-Path $repo '.git')) { & $git -C $repo pull -q --ff-only 2>$null | Out-Null }
   else { Say "  Downloading the workspace..."; & $gh repo clone detail-page/engineering-workspace $repo -- -q; if ($LASTEXITCODE -ne 0) { throw "Couldn't download detail-page/engineering-workspace." } }
+  # Testing an unmerged branch: set DP_WORKSPACE_BRANCH before running.
+  if ($env:DP_WORKSPACE_BRANCH) { & $git -C $repo fetch -q origin $env:DP_WORKSPACE_BRANCH; & $git -C $repo checkout -q -B $env:DP_WORKSPACE_BRANCH "origin/$($env:DP_WORKSPACE_BRANCH)" }
   Say "  ok   workspace in $repo"
+  $setup = Join-Path $repo 'SETUP.md'
   if ([Console]::IsInputRedirected -or -not [Environment]::UserInteractive) {
-    # Run by a coding agent (no keyboard): the agent confirms who you are and the defaults with you.
-    Say "`nNEXT (for the assistant): follow $repo\.claude\skills\workspace-setup\SKILL.md"
+    # Run by Claude (no keyboard): Claude carries on with the private setup.
+    Say "`nNEXT (for the assistant): follow $setup"
   } else {
-    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $repo 'setup.ps1')
+    Say "`nDone with the first step. Open the Claude app, go to the Code tab, open the folder $repo and say: set up my workspace"
   }
 }
