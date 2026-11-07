@@ -20,3 +20,5 @@ curl -fsSL https://raw.githubusercontent.com/detail-page/workspace-setup/main/in
 **Or ask your AI assistant** (the Claude app's Code tab, or Codex):
 
 > Set up my DetailPage workspace: run the command for my computer from https://github.com/detail-page/workspace-setup in the background, show me any link and code it prints, and then do what its last line says.
+
+While it runs, Windows will ask "Do you want to allow this app to make changes to your device?" a few times: click **Yes** each time. If the box doesn't pop up, look for a flashing shield icon in the taskbar and click it.
