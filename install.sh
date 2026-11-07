@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # DetailPage workspace bootstrap for macOS and Linux. Public on purpose: it runs before you're signed
 # in to GitHub, so it can't live in the private repo. It makes sure Git is there, installs the GitHub
-# CLI for your user, signs you in to GitHub, clones detail-page/engineering-workspace, then runs setup.
+# CLI for your user, signs you in to GitHub, clones detail-page/engineering-workspace, then hands off to its SETUP.md.
 #   curl -fsSL https://raw.githubusercontent.com/detail-page/workspace-setup/main/install.sh | bash
 set -euo pipefail
 REPO="$HOME/engineering-workspace"; BIN="$HOME/.local/bin"; mkdir -p "$BIN"; export PATH="$BIN:$PATH"
@@ -36,7 +36,7 @@ if ! command -v gh >/dev/null 2>&1; then
 fi
 if ! gh auth status >/dev/null 2>&1; then
   say ""; say "  GitHub sign-in: open https://github.com/login/device and enter the code shown below (it expires in 15 minutes)."
-  gh auth login --hostname github.com --git-protocol https --web --scopes repo,read:org,workflow </dev/null 2>&1 || true
+  gh auth login --hostname github.com --git-protocol https --web --scopes repo,read:org,read:packages </dev/null 2>&1 || true
   gh auth status >/dev/null 2>&1 || die "GitHub sign-in didn't finish. Run this again to get a new code."
 fi
 gh auth setup-git >/dev/null
