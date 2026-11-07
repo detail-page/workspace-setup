@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # DetailPage workspace bootstrap for macOS and Linux. Public on purpose: it runs before you're signed
 # in to GitHub, so it can't live in the private repo. It makes sure Git is there, installs the GitHub
-# CLI for your user, signs you in to GitHub, clones detail-page/engineering-workspace, then runs setup.
+# CLI for your user, signs you in to GitHub, clones detail-page/engineering-workspace, then hands off to its SETUP.md.
 #   curl -fsSL https://raw.githubusercontent.com/detail-page/workspace-setup/main/install.sh | bash
 set -euo pipefail
 REPO="$HOME/engineering-workspace"; BIN="$HOME/.local/bin"; mkdir -p "$BIN"; export PATH="$BIN:$PATH"
@@ -36,7 +36,7 @@ if ! command -v gh >/dev/null 2>&1; then
 fi
 if ! gh auth status >/dev/null 2>&1; then
   say ""; say "  GitHub sign-in: open https://github.com/login/device and enter the code shown below (it expires in 15 minutes)."
-  gh auth login --hostname github.com --git-protocol https --web --scopes repo,read:org,workflow </dev/null 2>&1 || true
+  gh auth login --hostname github.com --git-protocol https --web --scopes repo,read:org,read:packages </dev/null 2>&1 || true
   gh auth status >/dev/null 2>&1 || die "GitHub sign-in didn't finish. Run this again to get a new code."
 fi
 gh auth setup-git >/dev/null
@@ -46,5 +46,5 @@ if [ -d "$REPO/.git" ]; then git -C "$REPO" pull -q --ff-only || true
 else say "  Downloading the workspace..."; gh repo clone detail-page/engineering-workspace "$REPO" -- -q || die "couldn't download detail-page/engineering-workspace"; fi
 say "  ok   workspace in $REPO"
 # Someone at a terminal (even under curl | bash, where stdin is the script) has a /dev/tty; an agent does not.
-if [ -t 1 ] && (: </dev/tty) 2>/dev/null; then exec "$REPO/setup.sh" "$@" </dev/tty
-else say ""; say "NEXT (for the assistant): follow $REPO/.claude/skills/workspace-setup/SKILL.md"; fi
+if [ -t 1 ] && (: </dev/tty) 2>/dev/null; then say ""; say "Done with the first step. Open the folder $REPO in the Claude app's Code tab (Mac), or run claude in that folder (Linux), and say: set up my workspace"
+else say ""; say "NEXT (for the assistant): follow $REPO/SETUP.md"; fi
