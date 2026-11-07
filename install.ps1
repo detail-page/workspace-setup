@@ -58,13 +58,13 @@
   if ($LASTEXITCODE -ne 0) {
     Say "`n  GitHub sign-in: open https://github.com/login/device and enter the code below (it expires in 15 minutes)."
     # Through Git Bash with no input, so it prints the code and waits instead of asking to press Enter.
-    & $bash -lc "'/c/Program Files/GitHub CLI/gh.exe' auth login --hostname github.com --git-protocol https --web --clipboard --scopes repo,read:org,workflow,read:packages </dev/null 2>&1"
+    & $bash -lc "'/c/Program Files/GitHub CLI/gh.exe' auth login --hostname github.com --git-protocol https --web --clipboard --scopes repo,read:org,read:packages </dev/null 2>&1"
     & $gh auth status *> $null
     if ($LASTEXITCODE -ne 0) { throw "GitHub sign-in didn't finish. Run this again to get a new code." }
   }
   & $gh auth setup-git | Out-Null
   & $gh api orgs/detail-page/memberships/$(& $gh api user -q .login) -q .state *> $null
-  if ($LASTEXITCODE -ne 0) { throw "Your GitHub account isn't in DetailPage's GitHub organization yet. Ask your Tech Lead for an invite, accept it, then run this again." }
+  if ($LASTEXITCODE -ne 0) { throw "The GitHub account you're signed in as ($(& $gh api user -q .login)) isn't in DetailPage's GitHub organization. If that's the wrong account, run: gh auth logout, then run this again and sign in with your DetailPage one. If it's the right account, ask your Tech Lead for an invite, accept it, then run this again." }
   if (Test-Path (Join-Path $repo '.git')) { & $git -C $repo pull -q --ff-only 2>$null | Out-Null }
   else { Say "  Downloading the workspace..."; & $gh repo clone detail-page/engineering-workspace $repo -- -q; if ($LASTEXITCODE -ne 0) { throw "Couldn't download detail-page/engineering-workspace." } }
   # Testing an unmerged branch: set DP_WORKSPACE_BRANCH before running.
