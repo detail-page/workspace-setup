@@ -27,11 +27,30 @@
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) { throw "winget still isn't available. Install 'App Installer' from the Microsoft Store, then run this again." }
   }
   $git = "$env:ProgramFiles\Git\cmd\git.exe"; $gh = "$env:ProgramFiles\GitHub CLI\gh.exe"; $bash = "$env:ProgramFiles\Git\bin\bash.exe"
+  [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+  # Official installers, used when winget can't (a broken winget source is common on fresh PCs).
+  function Install-Official($name) {
+    $T = Join-Path $env:TEMP 'dp-workspace'; New-Item -ItemType Directory -Force $T | Out-Null
+    if ($name -eq 'Git.Git') {
+      $a = (Invoke-RestMethod 'https://api.github.com/repos/git-for-windows/git/releases/latest').assets | Where-Object { $_.name -like 'Git-*-64-bit.exe' } | Select-Object -First 1
+      $f = Join-Path $T $a.name; Invoke-WebRequest $a.browser_download_url -OutFile $f
+      Start-Process $f -ArgumentList '/VERYSILENT','/NORESTART','/NOCANCEL' -Wait
+    } else {
+      $a = (Invoke-RestMethod 'https://api.github.com/repos/cli/cli/releases/latest').assets | Where-Object { $_.name -like 'gh_*_windows_amd64.msi' } | Select-Object -First 1
+      $f = Join-Path $T $a.name; Invoke-WebRequest $a.browser_download_url -OutFile $f
+      Start-Process msiexec.exe -ArgumentList '/i',"`"$f`"",'/qn','/norestart' -Wait
+    }
+  }
   foreach ($p in @(@('Git.Git', $git), @('GitHub.cli', $gh))) {
     if (-not (Test-Path $p[1])) {
       Say "  Installing $($p[0])..."
-      & winget.exe install -e --id $p[0] --source winget --silent --accept-source-agreements --accept-package-agreements --disable-interactivity | Out-Null
-      if (-not (Test-Path $p[1])) { throw "Couldn't install $($p[0]). Run this again; if it keeps failing, ask your Tech Lead." }
+      $out = & winget.exe install -e --id $p[0] --source winget --silent --accept-source-agreements --accept-package-agreements --disable-interactivity 2>&1
+      if (-not (Test-Path $p[1])) {
+        Say "  winget couldn't install $($p[0]):"; Say (($out | Select-Object -Last 3) -join "`n")
+        Say "  Using the official installer instead..."
+        try { Install-Official $p[0] } catch { throw "Couldn't install $($p[0]) ($($_.Exception.Message)). Run this again; if it keeps failing, ask your Tech Lead." }
+        if (-not (Test-Path $p[1])) { throw "Couldn't install $($p[0]). Run this again; if it keeps failing, ask your Tech Lead." }
+      }
     }
   }
   Fresh-Path
