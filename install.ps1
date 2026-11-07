@@ -7,6 +7,7 @@
   # 'Continue': in Windows PowerShell 5.1, 'Stop' turns any stderr from gh/git/winget into a fatal error,
   # even when redirected. Every failure below is checked and explained explicitly instead.
   $ErrorActionPreference = 'Continue'
+  $ProgressPreference = 'SilentlyContinue'  # PowerShell 5.1's progress bar makes downloads very slow
   Set-ExecutionPolicy -Scope Process Bypass -Force
   [Console]::OutputEncoding = [Text.Encoding]::UTF8
   $repo = Join-Path $HOME 'engineering-workspace'
@@ -33,13 +34,17 @@
     $T = Join-Path $env:TEMP 'dp-workspace'; New-Item -ItemType Directory -Force $T | Out-Null
     if ($name -eq 'Git.Git') {
       $a = (Invoke-RestMethod 'https://api.github.com/repos/git-for-windows/git/releases/latest').assets | Where-Object { $_.name -like 'Git-*-64-bit.exe' } | Select-Object -First 1
-      $f = Join-Path $T $a.name; Invoke-WebRequest $a.browser_download_url -OutFile $f
-      Start-Process $f -ArgumentList '/VERYSILENT','/NORESTART','/NOCANCEL' -Wait
     } else {
       $a = (Invoke-RestMethod 'https://api.github.com/repos/cli/cli/releases/latest').assets | Where-Object { $_.name -like 'gh_*_windows_amd64.msi' } | Select-Object -First 1
-      $f = Join-Path $T $a.name; Invoke-WebRequest $a.browser_download_url -OutFile $f
-      Start-Process msiexec.exe -ArgumentList '/i',"`"$f`"",'/qn','/norestart' -Wait
     }
+    $f = Join-Path $T $a.name; Invoke-WebRequest $a.browser_download_url -OutFile $f
+    # Only run what's signed by a publisher Windows trusts (winget checks a manifest hash; we check the Authenticode signature).
+    $sig = Get-AuthenticodeSignature $f
+    if ($sig.Status -ne 'Valid') { throw "The downloaded $($a.name) isn't validly signed ($($sig.Status)); not running it." }
+    Say "  signed by: $($sig.SignerCertificate.Subject)"
+    # Both are per-machine installs, so they need the Windows admin prompt (click Yes).
+    if ($name -eq 'Git.Git') { Start-Process $f -ArgumentList '/VERYSILENT','/NORESTART','/NOCANCEL' -Verb RunAs -Wait }
+    else { Start-Process msiexec.exe -ArgumentList '/i',"`"$f`"",'/qn','/norestart' -Verb RunAs -Wait }
   }
   foreach ($p in @(@('Git.Git', $git), @('GitHub.cli', $gh))) {
     if (-not (Test-Path $p[1])) {
@@ -68,7 +73,10 @@
   if (Test-Path (Join-Path $repo '.git')) { & $git -C $repo pull -q --ff-only 2>$null | Out-Null }
   else { Say "  Downloading the workspace..."; & $gh repo clone detail-page/engineering-workspace $repo -- -q; if ($LASTEXITCODE -ne 0) { throw "Couldn't download detail-page/engineering-workspace." } }
   # Testing an unmerged branch: set DP_WORKSPACE_BRANCH before running.
-  if ($env:DP_WORKSPACE_BRANCH) { & $git -C $repo fetch -q origin $env:DP_WORKSPACE_BRANCH; & $git -C $repo checkout -q -B $env:DP_WORKSPACE_BRANCH "origin/$($env:DP_WORKSPACE_BRANCH)" }
+  if ($env:DP_WORKSPACE_BRANCH) {
+    & $git -C $repo fetch -q origin $env:DP_WORKSPACE_BRANCH; if ($LASTEXITCODE -ne 0) { throw "Couldn't fetch branch $($env:DP_WORKSPACE_BRANCH)." }
+    & $git -C $repo checkout -q -B $env:DP_WORKSPACE_BRANCH "origin/$($env:DP_WORKSPACE_BRANCH)"; if ($LASTEXITCODE -ne 0) { throw "Couldn't check out branch $($env:DP_WORKSPACE_BRANCH)." }
+  }
   Say "  ok   workspace in $repo"
   $setup = Join-Path $repo 'SETUP.md'
   if ([Console]::IsInputRedirected -or -not [Environment]::UserInteractive) {
