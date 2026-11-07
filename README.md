@@ -17,7 +17,7 @@ irm https://raw.githubusercontent.com/detail-page/workspace-setup/main/install.p
 curl -fsSL https://raw.githubusercontent.com/detail-page/workspace-setup/main/install.sh | bash
 ```
 
-**Or ask your AI assistant** (the Claude app's Code tab, or Codex):
+**Or ask your AI assistant** (the Claude app's Code tab):
 
 > Set up my DetailPage workspace: run the command for my computer from https://github.com/detail-page/workspace-setup in the background, show me any link and code it prints, and then do what its last line says.
 
