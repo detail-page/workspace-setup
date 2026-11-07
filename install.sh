@@ -46,5 +46,5 @@ if [ -d "$REPO/.git" ]; then git -C "$REPO" pull -q --ff-only || true
 else say "  Downloading the workspace..."; gh repo clone detail-page/engineering-workspace "$REPO" -- -q || die "couldn't download detail-page/engineering-workspace"; fi
 say "  ok   workspace in $REPO"
 # Someone at a terminal (even under curl | bash, where stdin is the script) has a /dev/tty; an agent does not.
-if [ -t 1 ] && (: </dev/tty) 2>/dev/null; then say ""; say "Done with the first step. Open the Claude app, go to the Code tab, open the folder $REPO and say: set up my workspace"
+if [ -t 1 ] && (: </dev/tty) 2>/dev/null; then say ""; say "Done with the first step. Open the folder $REPO in the Claude app's Code tab (Mac), or run claude in that folder (Linux), and say: set up my workspace"
 else say ""; say "NEXT (for the assistant): follow $REPO/SETUP.md"; fi

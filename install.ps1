@@ -41,6 +41,8 @@
     # Only run what's signed by a publisher Windows trusts (winget checks a manifest hash; we check the Authenticode signature).
     $sig = Get-AuthenticodeSignature $f
     if ($sig.Status -ne 'Valid') { throw "The downloaded $($a.name) isn't validly signed ($($sig.Status)); not running it." }
+    $expected = if ($name -eq 'Git.Git') { 'Johannes Schindelin' } else { 'GitHub, Inc.' }
+    if ($sig.SignerCertificate.Subject -notlike "*$expected*") { throw "The downloaded $($a.name) is signed by '$($sig.SignerCertificate.Subject)', not $expected; not running it." }
     Say "  signed by: $($sig.SignerCertificate.Subject)"
     # Both are per-machine installs, so they need the Windows admin prompt (click Yes).
     if ($name -eq 'Git.Git') { Start-Process $f -ArgumentList '/VERYSILENT','/NORESTART','/NOCANCEL' -Verb RunAs -Wait }
