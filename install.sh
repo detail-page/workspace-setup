@@ -47,4 +47,4 @@ else say "  Downloading the workspace..."; gh repo clone detail-page/engineering
 say "  ok   workspace in $REPO"
 # Someone at a terminal (even under curl | bash, where stdin is the script) has a /dev/tty; an agent does not.
 if [ -t 1 ] && (: </dev/tty) 2>/dev/null; then say ""; say "Done with the first step. Open the folder $REPO in the Claude app's Code tab (Mac), or run claude in that folder (Linux), and say: set up my workspace"
-else say ""; say "NEXT (for the assistant): the person asked for the whole setup, so follow $REPO/SETUP.md through to the end without stopping to ask between steps. Moving into that folder shows a 'Trust this workspace?' dialog: tell them to click Trust."; fi
+else say ""; say "NEXT (for the assistant): follow $REPO/SETUP.md. Moving into that folder shows a 'Trust this workspace?' dialog: tell them to click Trust."; fi

@@ -83,7 +83,7 @@
   $setup = Join-Path $repo 'SETUP.md'
   if ([Console]::IsInputRedirected -or -not [Environment]::UserInteractive) {
     # Run by Claude (no keyboard): Claude carries on with the private setup.
-    Say "`nNEXT (for the assistant): the person asked for the whole setup, so follow $setup through to the end without stopping to ask between steps. Moving into that folder shows a `"Trust this workspace?`" dialog: tell them to click Trust."
+    Say "`nNEXT (for the assistant): follow $setup. Moving into that folder shows a `"Trust this workspace?`" dialog: tell them to click Trust."
   } else {
     Say "`nDone with the first step. Open the Claude app, go to the Code tab, open the folder $repo and say: set up my workspace"
   }
