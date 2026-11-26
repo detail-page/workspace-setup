@@ -9,7 +9,7 @@ New-Item -ItemType Directory -Force $root | Out-Null
 # The stand-in for git.exe, gh.exe and bash.exe: a copy of a signed Windows program that exits 0 whatever
 # it is given. (A stub compiled here would be unsigned, and Windows application control blocks those.)
 $stub = Join-Path $env:SystemRoot 'System32\doskey.exe'
-$realProgramFiles = $env:ProgramFiles; $realPath = $env:Path
+$realProgramFiles = $env:ProgramFiles; $realPath = $env:Path; $realTemp = $env:TEMP
 
 function Put-Tool($id) {
   if ($id -eq 'Git.Git') {
@@ -54,12 +54,14 @@ function Start-Process {
 $failed = 0
 function Case($name, [string[]]$have, [hashtable]$set, [scriptblock]$expect) {
   $env:ProgramFiles = Join-Path $root ([guid]::NewGuid().ToString('N')); New-Item -ItemType Directory -Force $env:ProgramFiles | Out-Null
+  # install.ps1 downloads into %TEMP%\dp-workspace, so that moves under the test's own folder too.
+  $env:TEMP = Join-Path $root ([guid]::NewGuid().ToString('N')); New-Item -ItemType Directory -Force $env:TEMP | Out-Null
   $global:DPT = @{ calls = @(); winget = $false; bootstrap = 'fail'; wingetInstall = 'ok'; signature = 'Valid'; signer = $null }
   foreach ($k in $set.Keys) { $global:DPT[$k] = $set[$k] }
   foreach ($id in $have) { Put-Tool $id }
   $threw = $null
   try { $out = (& $Script *>&1 | Out-String) } catch { $threw = $_.Exception.Message; $out = '' }
-  $env:Path = $realPath
+  $env:Path = $realPath; $env:TEMP = $realTemp
   $problem = & $expect $global:DPT.calls $out $threw
   if ($problem) { $script:failed++; Write-Host "FAIL  $name`n      $problem`n      calls: $($global:DPT.calls -join ', ')  threw: $threw" }
   else { Write-Host "ok    $name" }
@@ -110,6 +112,6 @@ Case 'download signed by someone else is never run' @('GitHub.cli') @{ signer = 
   if ($calls -contains 'official Git.Git') { return 'it ran an installer from the wrong publisher' }
 }
 
-$env:ProgramFiles = $realProgramFiles; $env:Path = $realPath
+$env:ProgramFiles = $realProgramFiles; $env:Path = $realPath; $env:TEMP = $realTemp
 Remove-Item -Recurse -Force $root -ErrorAction SilentlyContinue
 if ($failed) { Write-Host "`n$failed failed"; exit 1 } else { Write-Host "`nall passed" }
