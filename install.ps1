@@ -1,7 +1,8 @@
 # DetailPage workspace bootstrap for Windows. Public on purpose: it runs before you're signed in to
-# GitHub, so it can't live in the private repo. It installs winget (if missing), Git and the GitHub
-# CLI, signs you in to GitHub, clones detail-page/engineering-workspace, then hands off to its SETUP.md,
-# which your Claude app runs for you.
+# GitHub, so it can't live in the private repo. It installs Git and the GitHub CLI if they're missing
+# (with winget, or the official installers where winget isn't available), signs you in to GitHub,
+# clones detail-page/engineering-workspace, then hands off to its SETUP.md, which your Claude app runs
+# for you. On a computer that already has both tools, such as a prebuilt cloud desktop, it installs nothing.
 #   irm https://raw.githubusercontent.com/detail-page/workspace-setup/main/install.ps1 | iex
 & {
   # 'Continue': in Windows PowerShell 5.1, 'Stop' turns any stderr from gh/git/winget into a fatal error,
@@ -14,20 +15,26 @@
   function Say($m) { Write-Host $m }
   function Fresh-Path { $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User') + ";$env:LOCALAPPDATA\Microsoft\WindowsApps" }
   Say "`n==> DetailPage workspace: getting started"
-  if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+  $git = "$env:ProgramFiles\Git\cmd\git.exe"; $gh = "$env:ProgramFiles\GitHub CLI\gh.exe"; $bash = "$env:ProgramFiles\Git\bin\bash.exe"
+  $tools = @(@{ id = 'Git.Git'; path = $git }, @{ id = 'GitHub.cli'; path = $gh })
+  $missing = @($tools | Where-Object { -not (Test-Path $_.path) })
+  # winget is only a way to install what's missing. A computer that already has Git and the GitHub CLI
+  # never needs it, and Windows Server has no winget at all, so failing to get it is not an error:
+  # the signed official installers below do the same job.
+  $haveWinget = [bool](Get-Command winget -ErrorAction SilentlyContinue)
+  if ($missing.Count -gt 0 -and -not $haveWinget) {
     Say "  Installing winget (Windows' package manager)..."
-    $ProgressPreference = 'SilentlyContinue'
     # Older Windows PowerShell setups default to TLS 1.0/1.1, which PowerShell Gallery refuses.
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
     try {
       Install-PackageProvider -Name NuGet -Scope CurrentUser -Force -ErrorAction Stop | Out-Null
       Install-Module Microsoft.WinGet.Client -Scope CurrentUser -Repository PSGallery -Force -ErrorAction Stop | Out-Null
       Repair-WinGetPackageManager -Force -Latest -ErrorAction Stop | Out-Null
-    } catch { throw "Couldn't install winget ($($_.Exception.Message)). Install 'App Installer' from the Microsoft Store, then run this again." }
+    } catch { Say "  winget isn't available on this computer ($($_.Exception.Message))." }
     Fresh-Path
-    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) { throw "winget still isn't available. Install 'App Installer' from the Microsoft Store, then run this again." }
+    $haveWinget = [bool](Get-Command winget -ErrorAction SilentlyContinue)
+    if (-not $haveWinget) { Say "  Carrying on with the official installers." }
   }
-  $git = "$env:ProgramFiles\Git\cmd\git.exe"; $gh = "$env:ProgramFiles\GitHub CLI\gh.exe"; $bash = "$env:ProgramFiles\Git\bin\bash.exe"
   [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
   # Official installers, used when winget can't (a broken winget source is common on fresh PCs).
   function Install-Official($name) {
@@ -48,16 +55,18 @@
     if ($name -eq 'Git.Git') { Start-Process $f -ArgumentList '/VERYSILENT','/NORESTART','/NOCANCEL' -Verb RunAs -Wait }
     else { Start-Process msiexec.exe -ArgumentList '/i',"`"$f`"",'/qn','/norestart' -Verb RunAs -Wait }
   }
-  foreach ($p in @(@('Git.Git', $git), @('GitHub.cli', $gh))) {
-    if (-not (Test-Path $p[1])) {
-      Say "  Installing $($p[0])... (a Windows admin prompt will appear: click Yes)"
-      $out = & winget.exe install -e --id $p[0] --source winget --silent --accept-source-agreements --accept-package-agreements --disable-interactivity 2>&1
-      if (-not (Test-Path $p[1])) {
-        Say "  winget couldn't install $($p[0]):"; Say (($out | Select-Object -Last 3) -join "`n")
+  foreach ($t in $missing) {
+    Say "  Installing $($t.id)... (a Windows admin prompt will appear: click Yes)"
+    if ($haveWinget) {
+      $out = & winget.exe install -e --id $t.id --source winget --silent --accept-source-agreements --accept-package-agreements --disable-interactivity 2>&1
+      if (-not (Test-Path $t.path)) {
+        Say "  winget couldn't install $($t.id):"; Say (($out | Select-Object -Last 3) -join "`n")
         Say "  Using the official installer instead..."
-        try { Install-Official $p[0] } catch { throw "Couldn't install $($p[0]) ($($_.Exception.Message)). Run this again; if it keeps failing, ask your Tech Lead." }
-        if (-not (Test-Path $p[1])) { throw "Couldn't install $($p[0]). Run this again; if it keeps failing, ask your Tech Lead." }
       }
+    }
+    if (-not (Test-Path $t.path)) {
+      try { Install-Official $t.id } catch { throw "Couldn't install $($t.id) ($($_.Exception.Message)). Run this again; if it keeps failing, ask your Tech Lead." }
+      if (-not (Test-Path $t.path)) { throw "Couldn't install $($t.id). Run this again; if it keeps failing, ask your Tech Lead." }
     }
   }
   Fresh-Path
